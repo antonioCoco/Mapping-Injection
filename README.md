@@ -16,8 +16,6 @@ In this technique you will have the following syscall pattern:<br>
 ## Requirements
 Supported OS: **Windows 10 / Windows Server 2016, version 1703 (build 10.0.15063)** and above versions
 
-Required Privilege: **SeCreateGlobalPrivilege**
-
 ## Usage
 The PoC will inject just a MessageBox shellcode in the target process PID specified as first argument:
 
@@ -33,9 +31,7 @@ With the function MapViewOfFile2() is possible to map a view of a file in a remo
 
 The problem in this scenario is that you need to drop the shellcode to the disk. In an ideal scenario you want your unpacked payload resides just in memory and never touches the disk (most of times means getting caught by AVs).
 
-Luckily enough is possible to create a file mapping object, through CreateFileMapping(), that is backed by the system paging file instead of by a file in the file system. This can be achieved by using the costant **INVALID_HANDLE_VALUE** as 1st parameter to the function CreateFileMapping() and a specific name for the name of the file mapping object (last parameter of the function).
-
-One important aspect to consider is the namespace of the file mapping object. This is represented by the prefix specified in the name. The namespace can be "**Global**" or "**Local**". When processes need to communicate through shared memory across buondaries (different running user) a Global file mapping object is needed. For that it's needed the **SeCreateGlobalPrivilege** in order to create file mapping object in the global namespace. In this specific PoC a static file mapping object is created named "**Global\MappingInjection**" and it's created in the global namespace because otherwise other processes (i.e. lsass) you are trying to inject won't "see" the shared memory where the final shellcode will reside.
+Luckily enough is possible to create a file mapping object, through CreateFileMapping(), that is backed by the system paging file instead of by a file in the file system. This can be achieved by using the costant **INVALID_HANDLE_VALUE** as 1st parameter to the function CreateFileMapping().
 
 Once the global file mapping object is created a local view of file is created with write permission in order to copy the shellcode into the file mapping object. Then a **memcpy()** is called to place the shellcode in the file mapping object. 
 After that a call to **MapViewOfFile2()** is issued and this will map in the remote process the shared memory we have just wrote with the last memcpy call. The result of MapViewOfFile2 is just the starting address of shared memory in the target process. Using that address in a call to **CreateRemoteThread()** will trigger a remote thread in the target process with the starting address pointing at the shared memory where the shellcode was placed.
